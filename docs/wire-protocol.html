@@ -1,0 +1,565 @@
+<title>MAX9860 EVKIT Wire Protocol</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+:root {
+  --ground:      #F2F5F6;
+  --surface:     #FFFFFF;
+  --surface-alt: #E9EEF1;
+  --ink:         #13191D;
+  --ink-soft:    #56646D;
+  --ink-faint:   #85939C;
+  --rule:        #CFD9DE;
+  --rule-soft:   #E2E9ED;
+  --accent:      #1C5A88;
+  --accent-ink:  #14405F;
+  --accent-wash: #DFEAF2;
+  --caution:     #8C2F39;
+  --caution-wash:#F5E3E5;
+  --ok:          #2C6851;
+  --byte-bg:     #EDF2F5;
+
+  --f-display: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --f-body:    "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --f-mono:    "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  --measure: 68ch;
+  --pad: clamp(1.25rem, 4vw, 3.25rem);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:      #0E1316;
+    --surface:     #161D21;
+    --surface-alt: #1C252A;
+    --ink:         #E2E9ED;
+    --ink-soft:    #9AA8B1;
+    --ink-faint:   #74838C;
+    --rule:        #2A363D;
+    --rule-soft:   #212B31;
+    --accent:      #74AED9;
+    --accent-ink:  #A6CDE8;
+    --accent-wash: #162A38;
+    --caution:     #DE9AA1;
+    --caution-wash:#2E1B1E;
+    --ok:          #7CC2A3;
+    --byte-bg:     #1B242A;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground:      #0E1316;
+  --surface:     #161D21;
+  --surface-alt: #1C252A;
+  --ink:         #E2E9ED;
+  --ink-soft:    #9AA8B1;
+  --ink-faint:   #74838C;
+  --rule:        #2A363D;
+  --rule-soft:   #212B31;
+  --accent:      #74AED9;
+  --accent-ink:  #A6CDE8;
+  --accent-wash: #162A38;
+  --caution:     #DE9AA1;
+  --caution-wash:#2E1B1E;
+  --ok:          #7CC2A3;
+  --byte-bg:     #1B242A;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 74rem;
+  margin: 0 auto;
+  padding: var(--pad);
+  display: flex;
+  flex-direction: column;
+  gap: 3.25rem;
+}
+
+/* ---------- masthead ---------- */
+.masthead {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-bottom: 1.75rem;
+  border-bottom: 2px solid var(--ink);
+}
+.eyebrow {
+  font-family: var(--f-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+h1 {
+  font-family: var(--f-display);
+  font-weight: 700;
+  font-size: clamp(2.1rem, 6vw, 3.4rem);
+  line-height: 1.02;
+  letter-spacing: -0.015em;
+  margin: 0;
+  text-wrap: balance;
+}
+.standfirst {
+  max-width: var(--measure);
+  color: var(--ink-soft);
+  font-size: 1.06rem;
+  margin: 0;
+}
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 2.25rem;
+  font-family: var(--f-mono);
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+.facts b { color: var(--ink); font-weight: 500; }
+
+/* ---------- sections ---------- */
+section { display: flex; flex-direction: column; gap: 1.1rem; }
+
+h2 {
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: 1.6rem;
+  letter-spacing: -0.01em;
+  margin: 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--rule);
+  text-wrap: balance;
+}
+h3 {
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: 1.05rem;
+  letter-spacing: 0.005em;
+  margin: 0.5rem 0 0;
+}
+p { margin: 0; max-width: var(--measure); }
+p + p { margin-top: 0.6rem; }
+.lede { color: var(--ink-soft); }
+
+code, .b {
+  font-family: var(--f-mono);
+  font-size: 0.86em;
+  background: var(--byte-bg);
+  padding: 0.12em 0.38em;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+.b { font-weight: 500; letter-spacing: 0.02em; }
+
+/* ---------- tables ---------- */
+.scroll { overflow-x: auto; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  background: var(--surface);
+  font-variant-numeric: tabular-nums;
+}
+caption {
+  text-align: left;
+  font-family: var(--f-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding-bottom: 0.5rem;
+}
+th, td {
+  text-align: left;
+  padding: 0.5rem 0.85rem;
+  border-bottom: 1px solid var(--rule-soft);
+  vertical-align: top;
+}
+thead th {
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--rule);
+  white-space: nowrap;
+}
+tbody tr:last-child td { border-bottom: none; }
+td.m, th.m { font-family: var(--f-mono); white-space: nowrap; }
+td.m { font-weight: 500; }
+tr.dim td { color: var(--ink-faint); }
+tr.hot td:first-child { box-shadow: inset 3px 0 0 var(--caution); }
+tr.key td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.tag {
+  font-family: var(--f-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.1rem 0.4rem;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+.tag.in  { background: var(--caution-wash); color: var(--caution); }
+.tag.na  { background: var(--surface-alt);  color: var(--ink-faint); }
+.tag.auto{ background: var(--accent-wash);  color: var(--accent-ink); }
+
+/* ---------- transcript ---------- */
+pre {
+  font-family: var(--f-mono);
+  font-size: 0.82rem;
+  line-height: 1.75;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
+  padding: 1rem 1.15rem;
+  margin: 0;
+  overflow-x: auto;
+}
+pre .tx { color: var(--accent-ink); font-weight: 500; }
+pre .rx { color: var(--ok); }
+pre .cm { color: var(--ink-faint); }
+
+/* ---------- callouts ---------- */
+.note {
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--caution);
+  background: var(--surface);
+  padding: 0.85rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.note h3 { margin: 0; color: var(--caution); font-size: 0.95rem; }
+.note p { font-size: 0.92rem; max-width: none; }
+
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+  gap: 1rem;
+}
+
+footer {
+  border-top: 1px solid var(--rule);
+  padding-top: 1.25rem;
+  color: var(--ink-faint);
+  font-size: 0.82rem;
+  font-family: var(--f-mono);
+}
+footer p { max-width: none; }
+
+a { color: var(--accent); }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Command module · reverse-engineered, bench-verified</div>
+    <h1>MAX9860 EVKIT Wire Protocol</h1>
+    <p class="standfirst">Everything needed to drive the MAX9860 evaluation board — clock tree, codec and S/PDIF transceiver — without the Maxim Windows application. The clock tree is the part you cannot reach any other way. Byte sequences below were captured off the live link, not inferred.</p>
+    <div class="facts">
+      <span><b>460800</b> baud 8N1</span>
+      <span>FTDI <b>0403:6001</b></span>
+      <span>firmware <b>MINIQUSB V01.05.39</b></span>
+      <span>codec at <b>0x20</b></span>
+    </div>
+  </header>
+
+  <section>
+    <h2>Why any of this is necessary</h2>
+    <p class="lede">The board does nothing on its own. Out of the box it produces no sound — the vendor application does nothing but set registers, and it does so in a way that had to be reverse-engineered to reproduce.</p>
+    <p>Most of that you can sidestep. Open <strong>JU8</strong> and the MAX9860's I²S and I²C lines are yours; the codec's control interface is ordinary I²C at <span class="b">0x20</span> and needs no command module at all. The CS8427 can be ignored entirely if you aren't using S/PDIF.</p>
+    <p><strong>The clock tree is the exception, and it is the reason this document exists.</strong> The two mux selects and both oscillator enables land on MAXQ2000 port pins — P0.1, P0.2, P0.4, P0.5 — and nowhere else. The board's eleven jumpers cover microphone wiring, the supply rails and the JU8 interface takeover; <em>none of them touches clock selection</em>. So there is no way to choose between the 12.288 MHz oscillator, the 13 MHz oscillator and the recovered S/PDIF clock, or to gate either oscillator, except by driving those four GPIOs through the command module.</p>
+    <p>Which sets the priorities for anyone implementing against this board:</p>
+    <div class="scroll">
+      <table>
+        <caption>What actually requires the command module</caption>
+        <thead><tr><th>Capability</th><th>Needs the command module?</th></tr></thead>
+        <tbody>
+          <tr class="key"><td><strong>Selecting and gating the master clock</strong></td><td><strong>Yes — no other route exists</strong></td></tr>
+          <tr class="key"><td><strong>Reading back the board's actual state</strong></td><td><strong>Yes — pins are only readable this way</strong></td></tr>
+          <tr><td>Configuring the codec</td><td>No — plain I²C at 0x20, reachable at JU8</td></tr>
+          <tr><td>Audio in and out</td><td>No — I²S at JU8</td></tr>
+          <tr class="dim"><td>CS8427 / S/PDIF</td><td>Only if you want S/PDIF at all</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>An external clock injected at JU8 row 5 avoids the mux, but does not avoid the problem: the on-board oscillators are still gated by those same GPIOs, so you cannot reliably guarantee they are silent without driving them.</p>
+  </section>
+
+  <section>
+    <h2>Transport</h2>
+    <p>The board carries an FT232 bridged to an on-board MAXQ2000 that runs the command-module firmware. You talk to <em>the MAXQ2000</em>, never to the codec directly — it performs the I²C and SPI cycles on your behalf.</p>
+    <p>Two routes to the same silicon, and they are <strong>mutually exclusive</strong>: the FTDI D2XX API (<code>FT_Open</code> device 0) or the virtual COM port. While one holds the device the other returns access-denied. The stock application uses D2XX; a portable driver is simpler over the COM port.</p>
+    <p>Every exchange is strict request/response — write a command, read its reply. No framing, no length prefix, no checksum, no line terminators. Reply length is fixed per command.</p>
+    <p>With one exception: <strong>on open the module emits an ASCII banner</strong>, <span class="b">"Maxim MINIQUSB V01.05.39 &gt;"</span>, 26 bytes with no terminator. It arrives unprompted and will otherwise turn up glued to the front of your first command's reply. Drain the port before the first command.</p>
+  </section>
+
+  <section>
+    <h2>Command set</h2>
+    <p class="lede">Pin commands encode the pin index in the low nibble, which is why the hardware exposes exactly sixteen pins, K0–K15.</p>
+    <div class="scroll">
+      <table>
+        <caption>Commands — <span class="b">K</span> = pin index 0–15, <span class="b">vv</span> = 00 or 01</caption>
+        <thead>
+          <tr><th>Operation</th><th class="m">Send</th><th class="m">Receive</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr class="key"><td>Read pin</td><td class="m">E0+K &nbsp;00</td><td class="m">00 | 01 | FA</td><td>00 low, 01 high, FA pin unavailable</td></tr>
+          <tr class="key"><td>Write pin</td><td class="m">F0+K &nbsp;vv</td><td class="m">F0</td><td>F0 is the acknowledgement, not an echo</td></tr>
+          <tr class="key"><td>SPI transfer byte</td><td class="m">AF &nbsp;mosi</td><td class="m">miso &nbsp;BF</td><td>one byte per command, but several may be pipelined into one write; chip-select is yours to drive</td></tr>
+          <tr class="key"><td>I²C write-then-read</td><td class="m">A0 05 &nbsp;wn &nbsp;rn &nbsp;addr &nbsp;data…</td><td class="m">read… &nbsp;B0</td><td>whole transaction in one command — the usual way in</td></tr>
+          <tr><td>I²C start</td><td class="m">A0 00</td><td class="m">—</td><td rowspan="6">Low-level primitives. Only needed for devices the combined form cannot express.</td></tr>
+          <tr><td>I²C repeated start</td><td class="m">A0 01</td><td class="m">—</td></tr>
+          <tr><td>I²C write byte</td><td class="m">A1 &nbsp;bb</td><td class="m">—</td></tr>
+          <tr><td>I²C read byte, ACK</td><td class="m">A2 01</td><td class="m">—</td></tr>
+          <tr><td>I²C read byte, NACK</td><td class="m">A2 00</td><td class="m">—</td></tr>
+          <tr><td>I²C stop</td><td class="m">A3</td><td class="m">—</td></tr>
+          <tr><td>Pulse 9 clocks</td><td class="m">A4</td><td class="m">—</td><td>bus recovery for a stuck slave</td></tr>
+          <tr><td>Capabilities</td><td class="m">A0 02</td><td class="m">BF 01 B0</td><td>fixed 3-byte reply on this firmware</td></tr>
+          <tr><td>SCL timeout</td><td class="m">A0 04</td><td class="m">02 FA 04 21 3E</td><td>5-byte reply</td></tr>
+          <tr><td>SMBus write / read block</td><td class="m">A0 06 · A0 07</td><td class="m">—</td><td>unused by this board</td></tr>
+          <tr class="dim"><td>unidentified</td><td class="m">AD &nbsp;bb</td><td class="m">bb &nbsp;0xBD</td><td>same shape as <span class="b">AF</span>; the vendor app issues it once during reset, just before releasing the transceiver. Purpose unknown — don't rely on it</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid2">
+      <div class="note" style="border-left-color: var(--accent);">
+        <h3 style="color: var(--accent-ink);">Status bytes follow a rule</h3>
+        <p>For the <span class="b">Ax</span> family the acknowledgement is <strong>the command's first byte with its high nibble changed from A to B</strong>: <span class="b">A0…→B0</span>, <span class="b">AD→BD</span>, <span class="b">AF→BF</span>. Pin writes answer <span class="b">F0</span>, and <span class="b">FA</span> is the error / not-available reply throughout.</p>
+      </div>
+      <div class="note">
+        <h3>Do not send 0xA9</h3>
+        <p>It puts the firmware into a continuous ASCII echo mode that saturates the link at full line rate and does not stop on its own. Recovery is closing and reopening the port. Nothing else in the <span class="b">A0–AF</span> range behaves this way.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Pin map</h2>
+    <p class="lede">What each pin index is physically wired to on this board. Read and write opcodes follow directly from the index.</p>
+    <div class="scroll">
+      <table>
+        <caption>K-pin assignments on the MAX9860 EV kit</caption>
+        <thead>
+          <tr><th>Pin</th><th class="m">Read</th><th class="m">Write</th><th>MAXQ2000</th><th>Net</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr class="dim"><td class="m">K0</td><td class="m">E0</td><td class="m">F0</td><td>—</td><td>—</td><td>unused</td></tr>
+          <tr class="hot"><td class="m">K1</td><td class="m">E1</td><td class="m">F1</td><td>P0.0</td><td>IRQ</td><td><span class="tag in">input</span> codec interrupt, active low — never drive it</td></tr>
+          <tr class="key"><td class="m">K2</td><td class="m">E2</td><td class="m">F2</td><td>P0.1</td><td>CLK_SEL</td><td>master clock source select</td></tr>
+          <tr class="key"><td class="m">K3</td><td class="m">E3</td><td class="m">F3</td><td>P0.2</td><td>OX_SEL</td><td>oscillator select</td></tr>
+          <tr class="key"><td class="m">K4</td><td class="m">E4</td><td class="m">F4</td><td>P0.3</td><td>CS8427_RST</td><td>transceiver reset — hold high to run</td></tr>
+          <tr class="key"><td class="m">K5</td><td class="m">E5</td><td class="m">F5</td><td>P0.4</td><td>—</td><td>13 MHz oscillator enable</td></tr>
+          <tr class="key"><td class="m">K6</td><td class="m">E6</td><td class="m">F6</td><td>P0.5</td><td>—</td><td>12.288 MHz oscillator enable</td></tr>
+          <tr class="dim"><td class="m">K7</td><td class="m">E7</td><td class="m">F7</td><td>P0.6</td><td>—</td><td>not connected</td></tr>
+          <tr class="dim"><td class="m">K8</td><td class="m">E8</td><td class="m">F8</td><td>P1.7</td><td>—</td><td>not connected</td></tr>
+          <tr class="key"><td class="m">K9</td><td class="m">E9</td><td class="m">F9</td><td>P5.4</td><td>CS</td><td>CS8427 chip select, active low — you drive this</td></tr>
+          <tr><td class="m">K10</td><td class="m">EA</td><td class="m">FA</td><td>P6.0</td><td>SCL</td><td><span class="tag auto">handled</span> driven by the I²C commands</td></tr>
+          <tr><td class="m">K11</td><td class="m">EB</td><td class="m">FB</td><td>P6.1</td><td>SDA</td><td><span class="tag auto">handled</span> driven by the I²C commands</td></tr>
+          <tr><td class="m">K12</td><td class="m">EC</td><td class="m">FC</td><td>P5.5</td><td>CDIN</td><td><span class="tag auto">handled</span> driven by the SPI command</td></tr>
+          <tr class="dim"><td class="m">K13</td><td class="m">ED</td><td class="m">FD</td><td>—</td><td>—</td><td><span class="tag na">FA</span> not available on this hardware</td></tr>
+          <tr class="dim"><td class="m">K14</td><td class="m">EE</td><td class="m">FE</td><td>—</td><td>—</td><td><span class="tag na">FA</span> not available on this hardware</td></tr>
+          <tr class="dim"><td class="m">K15</td><td class="m">EF</td><td class="m">FF</td><td>—</td><td>—</td><td>unused</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Writing K10 is the byte <span class="b">FA</span>, which is also the error reply value. They never collide — one is a command you send, the other a status you receive — but a naive log parser will confuse them.</p>
+  </section>
+
+  <section>
+    <h2>Clock tree</h2>
+    <p class="lede">Two 2:1 muxes in series feed MCLK. Only the selected oscillator is ever enabled, so the idle one cannot couple into the codec's master clock.</p>
+    <pre><span class="cm">  12.288 MHz (Y1) ──enable K6──▶ ┐
+                                 ├─ OX_SEL (K3) ─▶ ┐
+  13 MHz     (Y2) ──enable K5──▶ ┘                 ├─ CLK_SEL (K2) ─▶ MCLK
+  RMCK from CS8427 ──────────────────────────────▶ ┘</span></pre>
+    <div class="scroll">
+      <table>
+        <caption>Measured — each row read back off all sixteen pins</caption>
+        <thead>
+          <tr><th>Master clock</th><th class="m">K2 CLK_SEL</th><th class="m">K3 OX_SEL</th><th class="m">K5 13 MHz</th><th class="m">K6 12.288 MHz</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Recovered from S/PDIF</td><td class="m">1</td><td class="m">0</td><td class="m">0</td><td class="m">0</td></tr>
+          <tr><td>12.288 MHz</td><td class="m">0</td><td class="m">1</td><td class="m">0</td><td class="m">1</td></tr>
+          <tr><td>13 MHz</td><td class="m">0</td><td class="m">0</td><td class="m">1</td><td class="m">0</td></tr>
+          <tr><td>External</td><td class="m">0</td><td class="m">0</td><td class="m">0</td><td class="m">0</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><strong>External is not a mux position.</strong> It is the same select state as 13 MHz with both oscillators tri-stated, so an external source patched in at <strong>JU8 row 5</strong> meets no active driver. Selecting it in software does nothing on its own — the jumper is the actual change.</p>
+  </section>
+
+  <section>
+    <h2>Reaching the codec over I²C</h2>
+    <p>The MAX9860 answers at <strong>0x20</strong> — the eight-bit form, already shifted, exactly as you place it in the command. One command carries the whole transaction.</p>
+    <pre><span class="cm">read register 0x02 from the codec</span>
+<span class="tx">TX</span>  A0 05 01 01 20 02     <span class="cm">write 1 byte, read 1 byte, addr 0x20, register 0x02</span>
+<span class="rx">RX</span>  00 B0                 <span class="cm">register value 0x00, then the B0 acknowledgement</span>
+
+<span class="cm">write 0x80 to register 0x02 — read count zero</span>
+<span class="tx">TX</span>  A0 05 02 00 20 02 80
+<span class="rx">RX</span>  B0</pre>
+    <p>Read counts above one return that many bytes ahead of the <span class="b">B0</span>. A device that does not acknowledge yields <span class="b">FA</span> in place of the data.</p>
+
+    <div class="scroll">
+      <table>
+        <caption>MAX9860 registers — names as the EV kit software labels them, defaults observed on reset</caption>
+        <thead><tr><th class="m">Reg</th><th>Name</th><th class="m">Reset</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="m">0x00</td><td>Interrupt Status</td><td class="m">—</td><td>read-only; the app polls it continuously alongside K1</td></tr>
+          <tr><td class="m">0x02</td><td>Interrupt Enable</td><td class="m">00</td><td></td></tr>
+          <tr><td class="m">0x03</td><td>System Clock</td><td class="m">00</td><td></td></tr>
+          <tr><td class="m">0x04</td><td>Clock Control High</td><td class="m">00</td><td rowspan="2">audio clock divider</td></tr>
+          <tr><td class="m">0x05</td><td>Clock Control Low</td><td class="m">00</td></tr>
+          <tr><td class="m">0x06</td><td>Interface</td><td class="m">00</td><td rowspan="2">writing these also drives CS8427 <span class="b">0x05</span>/<span class="b">0x06</span></td></tr>
+          <tr><td class="m">0x07</td><td>Interface</td><td class="m">00</td></tr>
+          <tr><td class="m">0x08</td><td>Voice Filters</td><td class="m">00</td><td></td></tr>
+          <tr><td class="m">0x09</td><td>DAC Attenuation</td><td class="m">06</td><td></td></tr>
+          <tr><td class="m">0x0A</td><td>ADC Output</td><td class="m">33</td><td></td></tr>
+          <tr><td class="m">0x0B</td><td>Gain / Sidetone</td><td class="m">00</td><td></td></tr>
+          <tr><td class="m">0x0C</td><td>MIC Left</td><td class="m">14</td><td></td></tr>
+          <tr><td class="m">0x0E</td><td>AGC</td><td class="m">00</td><td></td></tr>
+          <tr><td class="m">0x0F</td><td>NG/AGC</td><td class="m">00</td><td></td></tr>
+          <tr class="key"><td class="m">0x10</td><td>System</td><td class="m">00</td><td><strong>bit 7 = shutdown/enable.</strong> <span class="b">0x8B</span> running, <span class="b">0x0B</span> shut down — the low bits are preserved, so read-modify-write</td></tr>
+          <tr class="dim"><td class="m">0xF8–0xFE</td><td>Test Points, VIO / I2S / Analog Tests</td><td class="m">—</td><td>factory test; leave alone</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>The vendor software <strong>reads every register straight back after writing it</strong>. Worth copying: it is the only confirmation you get that a write landed, since <span class="b">B0</span> only tells you the bus cycle completed.</p>
+  </section>
+
+  <section>
+    <h2>Reaching the transceiver over SPI</h2>
+    <p>The CS8427's control port is on the MAXQ2000's hardware SPI, but <strong>chip select is not automatic</strong> — it is plain GPIO on K9, and you bracket the transfer with it yourself.</p>
+    <p>Each byte is its own <span class="b">AF</span> command, but they can be <strong>pipelined into a single write</strong>, and the vendor application always does: all three bytes of a register access go out together and three replies come back at once. Both forms are identical on the wire — but a capture tool that assumes one command per write will read only the first byte and silently drop the rest.</p>
+    <pre><span class="cm">captured: write CS8427 register 0x04 (Clock Source) = 0x48</span>
+<span class="tx">TX</span>  F9 00                  <span class="cm">K9 low — assert chip select</span>
+<span class="rx">RX</span>  F0
+<span class="tx">TX</span>  AF 20  AF 04  AF 48    <span class="cm">chip 0x20 = write, MAP 0x04, data 0x48</span>
+<span class="rx">RX</span>  FF BF  FF BF  FF BF    <span class="cm">one &lt;miso&gt; BF pair per byte</span>
+<span class="tx">TX</span>  F9 01                  <span class="cm">K9 high — release chip select</span>
+<span class="rx">RX</span>  F0</pre>
+    <p>Write framing is <strong>chip byte, MAP, then data</strong>, all inside one <span class="b">/CS</span> window. Chip is <span class="b">0x20</span> to write; <strong>bit 7 of MAP auto-increments</strong> the register pointer across a burst.</p>
+
+    <h3>Reading takes two transactions, not one</h3>
+    <p>This is the part that will waste your afternoon. Putting <span class="b">0x21</span>, MAP and a dummy byte in a single <span class="b">/CS</span> window returns <strong>zeros</strong>. The register pointer has to be set by its own write transaction first, then read in a second one.</p>
+    <pre><span class="cm">verified: write 0x48 to Clock Source, then read it back</span>
+<span class="cm">--- does NOT work: one transaction ---</span>
+<span class="tx">TX</span>  F9 00 · AF 21 AF 04 AF 00 · F9 01
+<span class="rx">RX</span>  MISO FF 00 00                       <span class="cm">always zero</span>
+
+<span class="cm">--- works: address, then read ---</span>
+<span class="tx">TX</span>  F9 00 · AF 20 AF 04 · F9 01         <span class="cm">write chip byte + MAP, no data</span>
+<span class="tx">TX</span>  F9 00 · AF 21 AF 00 · F9 01         <span class="cm">read chip byte + one dummy</span>
+<span class="rx">RX</span>  MISO FF 48                          <span class="cm">second MISO byte is the register</span></pre>
+    <p>MISO during the chip-address byte is always <span class="b">0xFF</span> (the bus idles high); the register value arrives on the following byte.</p>
+    <p><strong>All six registers are readable</strong> — verified by writing the distinct values <span class="b">0x11</span>…<span class="b">0x66</span> and reading each one back, all six matching. A register that reads <span class="b">0x00</span> genuinely holds zero; it is not a failed readback. So a host program can recover the full transceiver configuration from the hardware rather than caching it, which the vendor software does not do.</p>
+
+    <div class="scroll">
+      <table>
+        <caption>CS8427 control registers, as the EV kit software labels them</caption>
+        <thead><tr><th class="m">MAP</th><th>Register</th><th class="m">Reset</th><th>Observed in use</th></tr></thead>
+        <tbody>
+          <tr><td class="m">0x01</td><td>Control 1</td><td class="m">01</td><td>—</td></tr>
+          <tr><td class="m">0x02</td><td>Control 2</td><td class="m">00</td><td>—</td></tr>
+          <tr><td class="m">0x03</td><td>Data Flow</td><td class="m">0C</td><td>—</td></tr>
+          <tr class="key"><td class="m">0x04</td><td>Clock Source</td><td class="m">09</td><td><span class="b">0x48</span> S/PDIF · <span class="b">0x08</span> I²S · <span class="b">0x49</span> after Configure</td></tr>
+          <tr><td class="m">0x05</td><td>Serial Input</td><td class="m">21</td><td><span class="b">0x21</span></td></tr>
+          <tr><td class="m">0x06</td><td>Serial Output</td><td class="m">A1</td><td><span class="b">0xA1</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Bit names for these registers are readable off the EV kit software's own CS8427 tab. For Clock Source they are <span class="b">RUN CLK1 CLK0 OUTC INC RXD1 RXD0</span>, which decodes the values above: S/PDIF sets <strong>RUN</strong>, selecting I²S clears it and stops the receiver.</p>
+    <p>Hold <strong>K4 high</strong> before expecting the transceiver to answer; it is the reset line and a low leaves the part held down.</p>
+  </section>
+
+  <section>
+    <h2>The board remembers nothing</h2>
+    <p class="lede">There is no non-volatile settings store anywhere in this design. Every configuration you want must be pushed over the wire, every session.</p>
+    <p>The only EEPROM on the board is <strong>U9, a 93C46 on the FT232's <span class="b">EECS</span>/<span class="b">EESK</span>/<span class="b">EEDATA</span> pins</strong> — that holds the USB descriptor (VID, PID, serial) and is not reachable from the command module. The firmware's <span class="b">A0 06</span>/<span class="b">A0 07</span> EEPROM support targets an I²C part on a daughter board; there isn't one here.</p>
+    <p>The vendor application's own Reset confirms it behaviourally: it writes <em>every</em> register blind and never reads anything first to recover prior state. Each read in that sequence is a read-back of the value just written.</p>
+    <p><strong>But the parts are volatile, not amnesiac.</strong> The codec and transceiver hold their registers for as long as the board stays powered, so closing and reopening a host program does not blank them — they keep the last values written until power is removed, or until something pushes a fresh configuration. "Starts blank" is true only after a power cycle.</p>
+    <pre><span class="cm">the vendor Reset sequence, captured — a complete cold configuration</span>
+K2=0  K3=0  K4=0  K5=0  K6=0        <span class="cm">selects quiet, both oscillators off, /RST low</span>
+i2c 0x20  regs 0x02..0x10 <- defaults, each verified by read-back
+spi       CS8427 0x01..0x06 <- defaults
+AD 20                               <span class="cm">unidentified, once</span>
+K4=1                                <span class="cm">transceiver released</span>
+K2=0  K3=0  K5=1  K6=0              <span class="cm">13 MHz selected and enabled</span></pre>
+    <p>That tail is an independent check on the clock table: <span class="b">CLK_SEL=0</span>, <span class="b">OX_SEL=0</span>, 13 MHz enable high is exactly the documented 13 MHz selection.</p>
+    <p>Because nothing is stored on the board, a host program does not have to reset at startup — every part of the state is recoverable by reading: codec registers over I²C, transceiver registers over SPI, and the clock configuration from the pins themselves (<span class="b">E0|K</span> for K2, K3, K5, K6). Reading rather than resetting means attaching to a running board without disturbing it.</p>
+  </section>
+
+  <section>
+    <h2>Bring-up order</h2>
+    <p class="lede">A sequence that lands the board in a known, working state from cold.</p>
+    <div class="scroll">
+      <table>
+        <caption>Cold start</caption>
+        <thead><tr><th>Step</th><th class="m">Bytes</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Release the transceiver</td><td class="m">F4 01</td><td>K4 high — CS8427 out of reset</td></tr>
+          <tr><td>Park chip select</td><td class="m">F9 01</td><td>K9 idles high so the first transfer has a clean edge</td></tr>
+          <tr><td>Silence both oscillators</td><td class="m">F5 00 · F6 00</td><td>avoid two drivers on the mux while you choose</td></tr>
+          <tr><td>Choose the source</td><td class="m">F2 vv · F3 vv</td><td>per the clock table above</td></tr>
+          <tr><td>Enable the one oscillator</td><td class="m">F5 01 <em>or</em> F6 01</td><td>never both</td></tr>
+          <tr><td>Confirm the codec is alive</td><td class="m">A0 05 01 01 20 02</td><td>a <span class="b">B0</span> reply means the bus is good</td></tr>
+          <tr><td>Configure the transceiver</td><td class="m">F9 00 · AF 20 AF mm AF dd · F9 01</td><td>CS8427 registers 0x01–0x06 — <strong>after</strong> K4 is high, not before</td></tr>
+          <tr><td>Configure the codec</td><td class="m">A0 05 02 00 20 rr dd</td><td>MAX9860 registers 0x02–0x0F, reading each back</td></tr>
+          <tr class="key"><td>Bring the codec out of shutdown</td><td class="m">A0 05 02 00 20 10 8B</td><td>register 0x10 bit 7 — do this <em>last</em>, once clocks and format are set</td></tr>
+          <tr><td>Poll the interrupt line</td><td class="m">E1 00</td><td>K1 reads 0 when the codec is asserting IRQ</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Things that will cost you an afternoon</h2>
+    <div class="grid2">
+      <div class="note">
+        <h3>K1 is an input</h3>
+        <p>It is the codec's interrupt output. The pin-write command will happily accept <span class="b">F1 01</span> and you will be driving against a live output.</p>
+      </div>
+      <div class="note">
+        <h3>K13 and K14 answer FA</h3>
+        <p>Not a bus fault — those indices are simply absent on this hardware. Treat <span class="b">FA</span> from a read as "no such pin", not as an error worth retrying.</p>
+      </div>
+      <div class="note">
+        <h3>D2XX and the COM port lock each other out</h3>
+        <p>Whichever opens first wins; the other gets access-denied until it is released. Closing the vendor application is not always enough — it holds the D2XX handle across a disconnect.</p>
+      </div>
+      <div class="note">
+        <h3>Both oscillators off is a valid state</h3>
+        <p>It means "external clock". If MCLK is dead and both enables read 0, the board is waiting on a jumper, not misconfigured.</p>
+      </div>
+      <div class="note">
+        <h3>Don't copy the vendor's reset ordering</h3>
+        <p>Its Reset writes all six CS8427 registers <em>while</em> K4 is low, raises K4 afterwards, and never rewrites them. If K4-high is the operational state — which normal running suggests — those writes went into a part held in reset. Release K4 first, then configure.</p>
+      </div>
+      <div class="note">
+        <h3>Commands batch inside one write</h3>
+        <p>A write is not a command boundary. Three <span class="b">AF</span> commands routinely travel in one transfer with three replies concatenated behind them. Parse the stream by command length, not by write boundary, or you will decode the first byte of each burst and lose the rest.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>Byte sequences captured from the live FTDI link. Pin assignments cross-checked against the EV kit schematic; clock states read back from the hardware.</p>
+  </footer>
+
+</div>

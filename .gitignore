@@ -1,0 +1,14 @@
+# captures produced by tools/cmod_sniff.py
+*.jsonl
+capture*.txt
+live*.txt
+sniff*.txt
+
+# python
+__pycache__/
+*.pyc
+.venv/
+
+# scratch
+*.png
+*.bak
