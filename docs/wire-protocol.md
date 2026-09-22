@@ -205,9 +205,10 @@ Names as the EV kit software labels them; defaults observed on reset.
 | Reg | Name | Reset | Notes |
 |---|---|---|---|
 | `0x00` | Interrupt Status | — | read-only; the app polls it continuously alongside K1 |
+| `0x01` | NG/AGC readback | — | read-only; live noise-gate attenuation and AGC gain. **Neither field is decibels**: `NG2:0` is 0/1/2/3/6/8/10/12 dB of attenuation, and `AGC4:0` is on the `PGAM` scale, `20 - code` dB. See `control-map.md` §8 |
 | `0x02` | Interrupt Enable | `00` | |
-| `0x03` | System Clock | `00` | |
-| `0x04` | Clock Control High | `00` | audio clock divider |
+| `0x03` | System Clock | `00` | **bit 0 does two jobs.** With `FREQ` = 00 it is the AGC clock rate (set above 24kHz); with `FREQ` ≠ 00 it picks 8kHz or 16kHz for exact integer mode. Integer mode covers those two rates only |
+| `0x04` | Clock Control High | `00` | audio clock divider; bit 7 is the PLL. Raise it only as slave, and only when `N` is not a whole number — an MCLK that divides exactly (12.288MHz here) needs no PLL |
 | `0x05` | Clock Control Low | `00` | |
 | `0x06` | Interface | `00` | writing these also drives CS8427 `0x05`/`0x06` |
 | `0x07` | Interface | `00` | |
@@ -219,11 +220,22 @@ Names as the EV kit software labels them; defaults observed on reset.
 | `0x0E` | AGC | `00` | |
 | `0x0F` | NG/AGC | `00` | |
 | **`0x10`** | **System** | `00` | **bit 7 = shutdown/enable.** `0x8B` running, `0x0B` shut down — low bits preserved, so read-modify-write |
-| `0xF8`–`0xFE` | Test Points, VIO / I2S / Analog Tests | — | factory test; leave alone |
+| `0xF8`–`0xFE` | Test Points, VIO / I2S / Analog Tests | — | factory test; leave alone — and see the `0xF9` note below |
 
 The vendor software **reads every register straight back after writing it**.
 Worth copying: it is the only confirmation you get that a write landed, since
 `B0` only tells you the bus cycle completed.
+
+**`0xF9` is the one register that does not read back what you wrote.** In the
+vendor application's startup sequence it writes `0x00` to `0xF9` and reads back
+`0x80`; every other register in that sequence, `0xF8` and `0xFA`–`0xFE`
+included, reads back exactly what went in. So a write-then-verify helper needs
+an exemption for `0xF9`, or should leave the test registers alone entirely.
+
+Why bit 7 comes back set was not investigated — characterising it means writing
+arbitrary values into an analog test register, which is not worth the risk for a
+block you should not be touching anyway. Treat this as "observed once, in the
+vendor's own sequence", not as a described behaviour.
 
 ---
 
@@ -309,10 +321,27 @@ the vendor Reset sequence, captured — a complete cold configuration
 K2=0  K3=0  K4=0  K5=0  K6=0        selects quiet, both oscillators off, /RST low
 i2c 0x20  regs 0x02..0x10 <- defaults, each verified by read-back
 spi       CS8427 0x01..0x06 <- defaults
+i2c 0x20  regs 0xF8..0xFE <- 00     the factory test registers, also blind
 AD 20                               unidentified, once
 K4=1                                transceiver released
 K2=0  K3=0  K5=1  K6=0              13 MHz selected and enabled
 ```
+
+**The application runs this at launch, not only on the Reset button.** Nothing
+in the UI says so, and the values it then displays look like a freshly powered
+board because it has just made it one. Measured by writing distinctive values
+into every writable register and then spawning the app suspended, so the hooks
+were in place before its first instruction — every marker was gone afterwards:
+
+```
+before launch   03=12 06=44 07=25 08=5A 09=2C 0A=71 0B=13 0E=66 0F=39
+after launch    03=00 06=00 07=00 08=00 09=06 0A=33 0B=00 0E=00 0F=00
+```
+
+Attaching to the running process cannot see this; use
+`tools/cmod_sniff.py --spawn`. The practical consequence is that **you cannot
+inspect a board's live state by opening the vendor application** — opening it
+destroys the state you wanted to look at.
 
 That tail is an independent check on the clock table: `CLK_SEL=0`, `OX_SEL=0`,
 13 MHz enable high is exactly the documented 13 MHz selection.
@@ -368,6 +397,14 @@ dead and both enables read 0, the board is waiting on a jumper.
 registers *while* K4 is low, raises K4 afterwards, and never rewrites them. If
 K4-high is the operational state — which normal running suggests — those writes
 went into a part held in reset. Release K4 first, then configure.
+
+**Opening the vendor application destroys the board's state.** It runs the full
+blind reset at launch, unprompted. If you want to see what a board is currently
+doing, read it yourself — do not open the app to look. See §8.
+
+**`0xF9` does not read back what you wrote.** Alone among the registers the
+vendor writes, it answers `0x80` to a written `0x00`. Write-then-read-back is
+the right discipline everywhere else; this is the exception. See §6.
 
 **Commands batch inside one write.** See §3.
 

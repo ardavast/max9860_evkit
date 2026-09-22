@@ -22,7 +22,9 @@ reading back board state.** Everything else in the reference is incidental.
 ## Layout
 
 ```
-docs/          protocol reference (md + the html published as an artifact)
+docs/          wire-protocol.md   the protocol reference (+ the html published as an artifact)
+               control-map.md     which register bits each vendor-app control drives
+               vendor-ui/         screenshots of the vendor app's seven tabs
 tools/         reverse-engineering and debugging tools — see below
 <impl>/        each implementation gets its own subdirectory
 ```
@@ -62,6 +64,11 @@ Options that matter:
 
 * `--no-poll` — hides the device-present probe (`A0 03`), which is ~93% of all
   traffic and buries everything else
+* `--spawn "C:\Program Files (x86)\MAX9860\MAX9860.exe"` — launch the app
+  suspended and capture from its first instruction. Attaching cannot see startup
+  traffic, and **the app does a full blind reset at launch** — writing every
+  register, including the `0xF8`–`0xFE` test registers, before you ever click
+  anything. See [`docs/control-map.md`](docs/control-map.md) §7
 * `--show-raw` — appends raw bytes to each row
 * `--raw-spi` — don't fold `/CS` windows into CS8427 register operations
 * `--transport d2xx|comm` — override the auto-selected capture layer
@@ -183,6 +190,12 @@ Window classes: `TForm1` (main), `TM2EAMForm` (command module),
   `TRadioButton`. Filtering on the latter finds nothing.
 * **`SendMessage` to a button that opens a modal dialog blocks forever.** Use
   `PostMessage` for anything that might open a dialog.
+* **`WM_SETTEXT` writes a disabled control, and desynchronises the app.** The
+  app locks fields it derives from something else — the MCLK frequency edit is
+  read-only unless the clock source is *External* — but `WM_SETTEXT` sets the
+  text anyway, producing a state the UI can never reach. A Configure in that
+  state computed `N` from the injected text and the PLL bit from the radio,
+  which cost real time to untangle. Drive the control that owns the value.
 * **The log memo silently stops appending when full**, and **never**
   `SetWindowText` it to clear — that desyncs VCL's `Lines` cache and kills
   logging until restart. Use the *Clear Window* button, or *Begin Saving…* to a

@@ -1,0 +1,540 @@
+/* MAX9860 EVKIT — same layout as the vendor application, modern styling. */
+
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --border: #d7dbe0;
+  --border-strong: #b9c0c8;
+  --text: #1b1f24;
+  --muted: #626d78;
+  --accent: #0b63c5;
+  --accent-text: #ffffff;
+  --lamp-off: #cdd3d9;
+  --lamp-on: #23a94a;
+  --error: #c02626;
+  --bit-set: #0b63c5;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --radius: 7px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14171a;
+    --surface: #1c2024;
+    --border: #2e353c;
+    --border-strong: #3d454e;
+    --text: #e8eaed;
+    --muted: #9aa4ae;
+    --accent: #4d9bf0;
+    --accent-text: #0d1013;
+    --lamp-off: #3a424a;
+    --lamp-on: #35c463;
+    --error: #ef6b6b;
+    --bit-set: #6fb2f5;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #14171a;
+  --surface: #1c2024;
+  --border: #2e353c;
+  --border-strong: #3d454e;
+  --text: #e8eaed;
+  --muted: #9aa4ae;
+  --accent: #4d9bf0;
+  --accent-text: #0d1013;
+  --lamp-off: #3a424a;
+  --lamp-on: #35c463;
+  --error: #ef6b6b;
+  --bit-set: #6fb2f5;
+}
+
+* { box-sizing: border-box; }
+
+/* Several panels set `display`, which would otherwise beat the user agent's
+   `[hidden] { display: none }` and leave hidden tabs and panels on screen. */
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 14px 16px 0;
+  gap: 12px;
+
+  /* Nothing here benefits from more width than this — the widest thing is the
+     register grid at roughly 790px — and stretching across a 4K display just
+     makes the controls drift apart. */
+  max-width: 1120px;
+  margin-inline: auto;
+  width: 100%;
+}
+
+h3, h4 { margin: 0; font-weight: 600; }
+
+/* --- header --------------------------------------------------------------- */
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.brand { display: flex; align-items: baseline; gap: 8px; }
+.brand-part { font-weight: 700; font-size: 20px; }
+.brand-sub { color: var(--muted); font-size: 13px; }
+
+.header-actions { display: flex; align-items: center; gap: 8px; }
+
+button, select, input[type="text"] {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 5px 10px;
+}
+
+button { cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled, select:disabled, input:disabled { opacity: 0.5; cursor: default; }
+
+button.primary {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+
+/* --- group boxes ---------------------------------------------------------- */
+
+.group {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px 12px;
+  min-width: 0;
+}
+
+.group-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.group-body { display: flex; flex-direction: column; gap: 10px; }
+
+.status-row {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 22px;
+}
+
+.hw-irq { display: flex; align-items: center; gap: 7px; margin-left: auto; color: var(--muted); }
+
+.lamp {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--lamp-off);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.18);
+  flex: none;
+}
+
+.lamp.on { background: var(--lamp-on); }
+
+/* --- tabs ----------------------------------------------------------------- */
+
+.app-main { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+
+.tab-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 7px 13px;
+  margin-bottom: -1px;
+}
+
+.tab.active {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.tab-body {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
+  padding: 16px;
+  flex: 1;
+  overflow: auto;
+}
+
+.tab-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.row { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; }
+.row.tight { gap: 8px; }
+.row.sliders { gap: 30px; align-items: flex-start; }
+
+.hint { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
+
+/* --- form controls -------------------------------------------------------- */
+
+.check { display: flex; align-items: center; gap: 7px; cursor: pointer; }
+.check input { accent-color: var(--accent); }
+
+.radio-list { gap: 8px; }
+
+.field { display: flex; flex-direction: column; gap: 3px; }
+.field-label { font-size: 12px; color: var(--muted); display: flex; gap: 5px; align-items: center; }
+
+.num, .readout { width: 68px; font-family: var(--mono); }
+.unit { color: var(--muted); font-size: 12px; }
+.readout-row { display: flex; align-items: center; gap: 6px; }
+
+.unverified {
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  display: inline-grid;
+  place-items: center;
+  font-size: 10px;
+  color: var(--muted);
+  cursor: help;
+  text-decoration: none;
+}
+
+/* --- sliders -------------------------------------------------------------- */
+
+/* Track and thumb are sized explicitly because the tick scales are inset by
+   half the thumb, so their marks line up with reachable thumb positions. */
+:root {
+  --track: 10px;        /* thickness of the trough */
+  --thumb-len: 11px;    /* thumb size along the travel axis */
+  --thumb-cross: 21px;  /* thumb size across it */
+}
+
+.range-v, .range-h {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  margin: 0;
+}
+
+.range-h { width: 100%; height: var(--thumb-cross); }
+.range-v { writing-mode: vertical-lr; direction: rtl; width: var(--thumb-cross); height: 100%; }
+
+.range-h::-webkit-slider-runnable-track,
+.range-v::-webkit-slider-runnable-track {
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+}
+
+.range-h::-webkit-slider-runnable-track { height: var(--track); }
+.range-v::-webkit-slider-runnable-track { width: var(--track); }
+
+.range-h::-webkit-slider-thumb,
+.range-v::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+.range-h::-webkit-slider-thumb {
+  width: var(--thumb-len);
+  height: var(--thumb-cross);
+  margin-top: calc((var(--track) - var(--thumb-cross)) / 2);
+}
+
+.range-v::-webkit-slider-thumb {
+  width: var(--thumb-cross);
+  height: var(--thumb-len);
+  margin-left: calc((var(--track) - var(--thumb-cross)) / 2);
+}
+
+.range-h:disabled::-webkit-slider-thumb,
+.range-v:disabled::-webkit-slider-thumb { background: var(--border-strong); }
+
+/* Firefox has no Web Serial, so this is only so the page is not broken there. */
+.range-h::-moz-range-track, .range-v::-moz-range-track {
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+}
+.range-h::-moz-range-thumb, .range-v::-moz-range-thumb {
+  background: var(--accent);
+  border: none;
+  border-radius: 2px;
+  width: var(--thumb-len);
+  height: var(--thumb-cross);
+}
+
+/* --- tick scales ---------------------------------------------------------- */
+
+.range-wrap { display: flex; }
+.range-wrap-h { flex-direction: column; }
+.range-wrap-v { flex-direction: row; height: 100%; }
+
+.ticks { display: flex; justify-content: space-between; }
+
+/* Inset by half the thumb so the first and last marks sit under the thumb's
+   extreme centres rather than the track's outer edges. */
+.range-wrap-h .ticks {
+  flex-direction: row;
+  height: 4px;
+  margin: 0 calc(var(--thumb-len) / 2);
+}
+
+.range-wrap-v .ticks {
+  flex-direction: column;
+  width: 4px;
+  margin: calc(var(--thumb-len) / 2) 0;
+}
+
+.ticks i { background: var(--border-strong); flex: none; }
+.range-wrap-h .ticks i { width: 1px; height: 100%; }
+.range-wrap-v .ticks i { height: 1px; width: 100%; }
+
+.slider-v { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.slider-v-title { font-size: 12px; color: var(--muted); text-align: center; }
+.slider-v-body { display: flex; align-items: stretch; gap: 8px; height: 210px; }
+
+.slider-v-marks {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.slider-h { display: flex; align-items: center; gap: 10px; }
+.slider-h-label { font-size: 12px; color: var(--muted); flex: none; }
+.slider-h-body { flex: 1; min-width: 160px; }
+
+.scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* Match the tick scale's inset so the labels sit under their marks. */
+.slider-h-body .scale { margin-inline: calc(var(--thumb-len) / 2); }
+
+/* --- bars and thresholds -------------------------------------------------- */
+
+.bar-block { display: flex; flex-direction: column; gap: 4px; }
+.bar-title { font-size: 12px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+.bar-row { display: flex; align-items: center; gap: 8px; }
+
+.bar {
+  flex: 1;
+  height: 14px;
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.bar-fill { height: 100%; background: var(--lamp-on); transition: width 0.12s linear; }
+.bar-value { font-family: var(--mono); font-size: 12px; min-width: 46px; }
+
+.threshold { display: flex; flex-direction: column; gap: 4px; }
+.threshold-title { font-size: 12px; color: var(--muted); }
+
+.threshold-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+  gap: 8px;
+}
+
+.agc-times {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+/* --- interface configuration ---------------------------------------------- */
+
+.iface { margin-top: 16px; }
+.iface-mode { display: flex; gap: 26px; }
+
+/* Both panels stay on screen; the radio above them decides which one takes
+   input, exactly as the vendor app does. */
+.iface-panels {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) 2.2fr;
+  gap: 22px;
+  margin-top: 12px;
+  align-items: start;
+}
+
+.panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  transition: opacity 0.12s linear;
+}
+
+.panel.is-off { opacity: 0.45; }
+
+.panel-auto {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.panel-manual {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 22px;
+}
+
+.manual-col { display: flex; flex-direction: column; gap: 9px; }
+.manual-col h4 { font-size: 13px; margin-top: 6px; }
+.manual-col h4:first-child { margin-top: 0; }
+
+/* The N divider is two bytes side by side, as in the vendor app, not a pair of
+   full-width fields that wrap onto separate lines. */
+.n-row { flex-wrap: nowrap; }
+.n-row .hex { width: 76px; }
+
+/* --- register grid -------------------------------------------------------- */
+
+.reg-grid { display: flex; flex-direction: column; gap: 1px; min-width: 720px; }
+
+.reg-row {
+  display: grid;
+  grid-template-columns: 210px repeat(8, minmax(58px, 1fr)) 76px;
+  align-items: center;
+  gap: 4px;
+}
+
+.reg-head .reg-bit { font-weight: 700; color: var(--text); text-align: center; }
+
+.reg-group-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 12px 0 3px;
+}
+
+.reg-name { display: flex; gap: 8px; font-size: 13px; }
+.reg-addr { font-family: var(--mono); color: var(--muted); }
+
+.reg-bit {
+  text-align: center;
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--muted);
+  padding: 3px 0;
+  border-radius: 4px;
+}
+
+.reg-bit.set { color: var(--bit-set); font-weight: 700; background: color-mix(in srgb, var(--bit-set) 12%, transparent); }
+.reg-bit.empty { color: transparent; }
+
+.hex { width: 100%; font-family: var(--mono); text-align: center; padding: 3px 4px; }
+.read-only .hex { color: var(--muted); }
+
+/* --- log and status bar --------------------------------------------------- */
+
+.log-pane {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.log-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 5px 9px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.log-bar-title {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 11px;
+}
+
+.log-filter { font-size: 12px; color: var(--muted); }
+.log-clear { margin-left: auto; padding: 2px 9px; font-size: 12px; }
+
+.log {
+  height: 118px;
+  overflow: auto;
+  padding: 6px 9px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.log-line { white-space: pre; }
+.log-line.error { color: var(--error); }
+
+.log.hide-i2c .log-line.i2c,
+.log.hide-spi .log-line.spi,
+.log.hide-gpio .log-line.gpio,
+.log.hide-read .log-line.read { display: none; }
+
+/* `Reads` filters a different axis to the bus filters, so set it apart. */
+.log-filter-split {
+  margin-left: 4px;
+  padding-left: 14px;
+  border-left: 1px solid var(--border);
+}
+
+.status-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  border-top: 1px solid var(--border);
+  padding: 7px 2px;
+  font-size: 12px;
+  color: var(--muted);
+  position: sticky;
+  bottom: 0;
+  background: var(--bg);
+}
+
+.hint.warn { color: var(--error); }

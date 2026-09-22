@@ -422,9 +422,10 @@ a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outli
         <thead><tr><th class="m">Reg</th><th>Name</th><th class="m">Reset</th><th>Notes</th></tr></thead>
         <tbody>
           <tr><td class="m">0x00</td><td>Interrupt Status</td><td class="m">—</td><td>read-only; the app polls it continuously alongside K1</td></tr>
+          <tr><td class="m">0x01</td><td>NG/AGC readback</td><td class="m">—</td><td>read-only; live noise-gate attenuation and AGC gain. <strong>Neither field is decibels</strong>: <span class="b">NG2:0</span> is 0/1/2/3/6/8/10/12 dB of attenuation, and <span class="b">AGC4:0</span> is on the <span class="b">PGAM</span> scale, <span class="b">20 - code</span> dB.</td></tr>
           <tr><td class="m">0x02</td><td>Interrupt Enable</td><td class="m">00</td><td></td></tr>
-          <tr><td class="m">0x03</td><td>System Clock</td><td class="m">00</td><td></td></tr>
-          <tr><td class="m">0x04</td><td>Clock Control High</td><td class="m">00</td><td rowspan="2">audio clock divider</td></tr>
+          <tr><td class="m">0x03</td><td>System Clock</td><td class="m">00</td><td><strong>Bit 0 does two jobs.</strong> With FREQ = 00 it is the AGC clock rate (set above 24kHz); with FREQ &ne; 00 it picks 8kHz or 16kHz for exact integer mode, which covers those two rates only</td></tr>
+          <tr><td class="m">0x04</td><td>Clock Control High</td><td class="m">00</td><td rowspan="2">audio clock divider; bit 7 of <span class="b">0x04</span> is the PLL. Raise it only as slave, and only when N is not a whole number &mdash; an MCLK that divides exactly (12.288MHz here) needs no PLL</td></tr>
           <tr><td class="m">0x05</td><td>Clock Control Low</td><td class="m">00</td></tr>
           <tr><td class="m">0x06</td><td>Interface</td><td class="m">00</td><td rowspan="2">writing these also drives CS8427 <span class="b">0x05</span>/<span class="b">0x06</span></td></tr>
           <tr><td class="m">0x07</td><td>Interface</td><td class="m">00</td></tr>
@@ -436,11 +437,13 @@ a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outli
           <tr><td class="m">0x0E</td><td>AGC</td><td class="m">00</td><td></td></tr>
           <tr><td class="m">0x0F</td><td>NG/AGC</td><td class="m">00</td><td></td></tr>
           <tr class="key"><td class="m">0x10</td><td>System</td><td class="m">00</td><td><strong>bit 7 = shutdown/enable.</strong> <span class="b">0x8B</span> running, <span class="b">0x0B</span> shut down — the low bits are preserved, so read-modify-write</td></tr>
-          <tr class="dim"><td class="m">0xF8–0xFE</td><td>Test Points, VIO / I2S / Analog Tests</td><td class="m">—</td><td>factory test; leave alone</td></tr>
+          <tr class="dim"><td class="m">0xF8–0xFE</td><td>Test Points, VIO / I2S / Analog Tests</td><td class="m">—</td><td>factory test; leave alone — and see the 0xF9 note below</td></tr>
         </tbody>
       </table>
     </div>
     <p>The vendor software <strong>reads every register straight back after writing it</strong>. Worth copying: it is the only confirmation you get that a write landed, since <span class="b">B0</span> only tells you the bus cycle completed.</p>
+    <p><strong>0xF9 is the one register that does not read back what you wrote.</strong> In the vendor application's startup sequence it writes <span class="b">0x00</span> to <span class="b">0xF9</span> and reads back <span class="b">0x80</span>; every other register in that sequence, <span class="b">0xF8</span> and <span class="b">0xFA</span>–<span class="b">0xFE</span> included, reads back exactly what went in. So a write-then-verify helper needs an exemption for <span class="b">0xF9</span>, or should leave the test registers alone entirely.</p>
+    <p>Why bit 7 comes back set was not investigated — characterising it means writing arbitrary values into an analog test register, which is not worth the risk for a block you should not be touching anyway. Treat this as "observed once, in the vendor's own sequence", not as a described behaviour.</p>
   </section>
 
   <section>
@@ -498,9 +501,14 @@ a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outli
 K2=0  K3=0  K4=0  K5=0  K6=0        <span class="cm">selects quiet, both oscillators off, /RST low</span>
 i2c 0x20  regs 0x02..0x10 <- defaults, each verified by read-back
 spi       CS8427 0x01..0x06 <- defaults
+i2c 0x20  regs 0xF8..0xFE <- 00     <span class="cm">the factory test registers, also blind</span>
 AD 20                               <span class="cm">unidentified, once</span>
 K4=1                                <span class="cm">transceiver released</span>
 K2=0  K3=0  K5=1  K6=0              <span class="cm">13 MHz selected and enabled</span></pre>
+    <p><strong>The application runs this at launch, not only on the Reset button.</strong> Nothing in the UI says so, and the values it then displays look like a freshly powered board because it has just made it one. Measured by writing distinctive values into every writable register and then spawning the app suspended, so the hooks were in place before its first instruction — every marker was gone afterwards:</p>
+    <pre>before launch   03=12 06=44 07=25 08=5A 09=2C 0A=71 0B=13 0E=66 0F=39
+after launch    03=00 06=00 07=00 08=00 09=06 0A=33 0B=00 0E=00 0F=00</pre>
+    <p>Attaching to the running process cannot see this; use <span class="b">tools/cmod_sniff.py --spawn</span>. The practical consequence is that <strong>you cannot inspect a board's live state by opening the vendor application</strong> — opening it destroys the state you wanted to look at.</p>
     <p>That tail is an independent check on the clock table: <span class="b">CLK_SEL=0</span>, <span class="b">OX_SEL=0</span>, 13 MHz enable high is exactly the documented 13 MHz selection.</p>
     <p>Because nothing is stored on the board, a host program does not have to reset at startup — every part of the state is recoverable by reading: codec registers over I²C, transceiver registers over SPI, and the clock configuration from the pins themselves (<span class="b">E0|K</span> for K2, K3, K5, K6). Reading rather than resetting means attaching to a running board without disturbing it.</p>
   </section>
@@ -550,6 +558,14 @@ K2=0  K3=0  K5=1  K6=0              <span class="cm">13 MHz selected and enabled
       <div class="note">
         <h3>Don't copy the vendor's reset ordering</h3>
         <p>Its Reset writes all six CS8427 registers <em>while</em> K4 is low, raises K4 afterwards, and never rewrites them. If K4-high is the operational state — which normal running suggests — those writes went into a part held in reset. Release K4 first, then configure.</p>
+      </div>
+      <div class="note">
+        <h3>Opening the vendor application destroys the board's state</h3>
+        <p>It runs the full blind reset at launch, unprompted. If you want to see what a board is currently doing, read it yourself — do not open the app to look.</p>
+      </div>
+      <div class="note">
+        <h3>0xF9 does not read back what you wrote</h3>
+        <p>Alone among the registers the vendor writes, it answers <span class="b">0x80</span> to a written <span class="b">0x00</span>. Write-then-read-back is the right discipline everywhere else; this is the exception.</p>
       </div>
       <div class="note">
         <h3>Commands batch inside one write</h3>

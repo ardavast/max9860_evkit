@@ -516,12 +516,22 @@ def summarise(txns: list[Txn]) -> str:
     return "\n".join(out)
 
 
-def capture(process: str, seconds: int, raw_path: str) -> list[Event]:
+def capture(process: str, seconds: int, raw_path: str,
+            spawn: str | None = None) -> list[Event]:
     import frida
 
     events: list[Event] = []
     start = time.time()
-    session = frida.attach(process)
+    if spawn:
+        # Spawn suspended so the hooks are in place before the app's first
+        # instruction. Attaching to an already-running process cannot see what
+        # it did at startup - and this app does a full blind reset there.
+        device = frida.get_local_device()
+        pid = device.spawn([spawn])
+        session = device.attach(pid)
+    else:
+        device = pid = None
+        session = frida.attach(process)
     script = session.create_script(AGENT_JS)
     raw = open(raw_path, "w", encoding="utf-8")
 
@@ -543,8 +553,14 @@ def capture(process: str, seconds: int, raw_path: str) -> list[Event]:
 
     script.on("message", on_message)
     script.load()
-    print(f"[capturing {seconds}s from {process} - exercise the app now]",
-          file=sys.stderr)
+    if spawn:
+        device.resume(pid)
+        start = time.time()   # t=0 is the app's first instruction
+        print(f"[spawned pid {pid}, capturing {seconds}s from launch]",
+              file=sys.stderr)
+    else:
+        print(f"[capturing {seconds}s from {process} - exercise the app now]",
+              file=sys.stderr)
     try:
         time.sleep(seconds)
     except KeyboardInterrupt:
@@ -574,6 +590,10 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--process", default="MAX9860.exe",
                     help="process to attach to (default: MAX9860.exe)")
+    ap.add_argument("--spawn", metavar="EXE",
+                    help="launch EXE suspended and capture from its first "
+                         "instruction, instead of attaching to a running "
+                         "process - the only way to see startup traffic")
     ap.add_argument("--seconds", type=int, default=30,
                     help="capture duration (default: 30)")
     ap.add_argument("--decode", metavar="FILE",
@@ -596,7 +616,7 @@ def main() -> int:
     args = ap.parse_args()
 
     events = load(args.decode) if args.decode else capture(
-        args.process, args.seconds, args.raw)
+        args.process, args.seconds, args.raw, args.spawn)
 
     if not events:
         print("no traffic captured - is the app connected and are you "

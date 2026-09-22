@@ -12,3 +12,7 @@ __pycache__/
 # scratch
 *.png
 *.bak
+
+# except the vendor-app screenshots, which are the layout reference for
+# implementations and outlive having MAX9860.exe installed
+!docs/vendor-ui/*.png
